@@ -26,9 +26,9 @@ async function sendPrompt() {
     if (data.candidates && data.candidates[0].content) {
       resultBox.textContent = data.candidates[0].content.parts[0].text;
     } else {
-      resultBox.textContent = "Duh, AI-nya bingung. Coba tanya hal lain!";
+      resultBox.textContent = "Error: " + JSON.stringify(data);
     }
   } catch (error) {
-    resultBox.textContent = "Koneksi bermasalah atau API Key error!";
+    resultBox.textContent = "Koneksi bermasalah!";
   }
 }
