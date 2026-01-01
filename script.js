@@ -2,20 +2,33 @@ async function sendPrompt() {
   const prompt = document.getElementById("prompt").value;
   const resultBox = document.getElementById("result");
 
-  resultBox.textContent = "Generating...";
+  if (!prompt) {
+    resultBox.textContent = "Ketik perintah dulu dong!";
+    return;
+  }
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=API_KEY_KAMU",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+  resultBox.textContent = "Emergent AI lagi mikir...";
+
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyD_HZMpEVY9BIw6K_JwWnALyRjcsTkC8oQ",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    
+    if (data.candidates && data.candidates[0].content) {
+      resultBox.textContent = data.candidates[0].content.parts[0].text;
+    } else {
+      resultBox.textContent = "Duh, AI-nya bingung. Coba tanya hal lain!";
     }
-  );
-
-  const data = await response.json();
-  resultBox.textContent =
-    data.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal generate";
+  } catch (error) {
+    resultBox.textContent = "Koneksi bermasalah atau API Key error!";
+  }
 }
