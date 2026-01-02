@@ -1,19 +1,109 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>AI App Builder</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AldiTools Clone - Versi Gratis</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-magic"></i> AldiTools Clone</h1>
+            <p class="subtitle">Platform alat AI gratis tanpa token. Generate gambar, video, suara langsung di browser.</p>
+            <div class="alert">
+                <i class="fas fa-info-circle"></i> Versi ini 100% gratis, tidak perlu login atau token.
+            </div>
+        </header>
 
-<div class="box">
-  <h2>AI App Builder</h2>
-  <textarea id="prompt" placeholder="Tulis permintaan kamu di sini..."></textarea>
-  <button onclick="sendPrompt()">Generate</button>
-  <pre id="result"></pre>
-</div>
+        <!-- Dashboard Tools -->
+        <section class="tools-grid">
+            <h2><i class="fas fa-sliders-h"></i> Pilih Tool</h2>
+            <div class="grid">
+                <!-- Tool 1: Gambar -->
+                <div class="tool-card" data-tool="image">
+                    <div class="tool-icon">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <h3>Generasi Gambar AI</h3>
+                    <p>Generate gambar dari teks dengan AI simulasi.</p>
+                    <button class="btn-use">Gunakan</button>
+                </div>
 
-<script src="script.js"></script>
+                <!-- Tool 2: Video -->
+                <div class="tool-card" data-tool="video">
+                    <div class="tool-icon">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <h3>Generasi Video</h3>
+                    <p>Buat video pendek dari prompt teks.</p>
+                    <button class="btn-use">Gunakan</button>
+                </div>
+
+                <!-- Tool 3: Suara -->
+                <div class="tool-card" data-tool="audio">
+                    <div class="tool-icon">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                    <h3>Ubah Suara AI</h3>
+                    <p>Konversi teks ke suara dengan berbagai karakter.</p>
+                    <button class="btn-use">Gunakan</button>
+                </div>
+
+                <!-- Tool 4: Teks -->
+                <div class="tool-card" data-tool="text">
+                    <div class="tool-icon">
+                        <i class="fas fa-font"></i>
+                    </div>
+                    <h3>Generasi Teks AI</h3>
+                    <p>Tulis artikel, puisi, kode dengan AI simulasi.</p>
+                    <button class="btn-use">Gunakan</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Generator Interface -->
+        <section class="generator-section">
+            <h2><i class="fas fa-bolt"></i> Generator</h2>
+            <div class="generator">
+                <div class="input-group">
+                    <label for="prompt">Masukkan prompt:</label>
+                    <textarea id="prompt" placeholder="Contoh: 'Gambar pemandangan gunung dengan matahari terbit, style anime'"></textarea>
+                </div>
+                <div class="settings">
+                    <h4><i class="fas fa-cog"></i> Pengaturan</h4>
+                    <select id="style">
+                        <option value="realistic">Realistis</option>
+                        <option value="anime">Anime</option>
+                        <option value="art">Artistic</option>
+                    </select>
+                    <button id="generate-btn"><i class="fas fa-play"></i> Generate Sekarang</button>
+                </div>
+            </div>
+            <div class="result-container">
+                <h4><i class="fas fa-history"></i> Hasil Generate</h4>
+                <div id="result"></div>
+            </div>
+        </section>
+
+        <!-- Riwayat -->
+        <section class="history">
+            <h2><i class="fas fa-history"></i> Riwayat Generasi</h2>
+            <div id="history-list">
+                <!-- Diisi JavaScript -->
+            </div>
+            <button id="clear-history"><i class="fas fa-trash"></i> Hapus Riwayat</button>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>AldiTools Clone &copy; 2023 - Versi Gratis Tanpa Token</p>
+            <p class="footer-note">Ini adalah replika frontend untuk edukasi. Tidak terhubung dengan AldiTools asli.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
 </body>
-</html>
+  </html>
