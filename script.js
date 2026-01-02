@@ -1,218 +1,323 @@
-async function sendPrompt() {
-  const prompt = document.getElementById("prompt").value;
-  const resultBox = document.getElementById("result");
-
-  if (!prompt) {
-    resultBox.textContent = "Ketik perintah dulu dong!";
-    return;
-  }
-
-  resultBox.textContent = "Emergent AI lagi mikir...";
-
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyD_HZMpEVY9BIw6K_JwWnALyRjcsTkC8oQ",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      }
-    );
-
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0].content) {
-      resultBox.textContent = data.candidates[0].content.parts[0].text;
-    } else {
-      resultBox.textContent = "Error: " + JSON.stringify(data);
+// Dyron Mode v1 - AldiTools Clone Engine
+class AldiToolsClone {
+    constructor() {
+        this.history = JSON.parse(localStorage.getItem('aldiToolsHistory')) || [];
+        this.init();
     }
-  } catch (error) {
-    resultBox.textContent = "Koneksi bermasalah!";
-  }
+
+    init() {
+        console.log('AldiTools Clone v1.0 - Dyron Engine Active');
+        this.bindEvents();
+        this.renderHistory();
+        this.setupMockData();
+    }
+
+    bindEvents() {
+        // Tool cards
+        document.querySelectorAll('.btn-use').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tool = e.target.closest('.tool-card').dataset.tool;
+                this.selectTool(tool);
+            });
+        });
+
+        // Generate button
+        document.getElementById('generate-btn').addEventListener('click', () => {
+            this.generateContent();
+        });
+
+        // Clear history
+        document.getElementById('clear-history').addEventListener('click', () => {
+            this.clearHistory();
+        });
+
+        // Quick prompts
+        document.getElementById('prompt').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                this.generateContent();
+            }
+        });
+    }
+
+    selectTool(tool) {
+        const toolNames = {
+            'image': 'Generasi Gambar AI',
+            'video': 'Generasi Video',
+            'audio': 'Ubah Suara AI',
+            'text': 'Generasi Teks AI'
+        };
+
+        document.getElementById('prompt').value = `Saya ingin menggunakan ${toolNames[tool]}. `;
+        document.getElementById('prompt').focus();
+        
+        // Update UI
+        document.querySelectorAll('.tool-card').forEach(card => {
+            card.style.border = '1px solid #3B82F6';
+        });
+        event.target.closest('.tool-card').style.border = '2px solid #10b981';
+    }
+
+    generateContent() {
+        const prompt = document.getElementById('prompt').value;
+        const style = document.getElementById('style').value;
+        
+        if (!prompt.trim()) {
+            this.showResult('⚠️ Masukkan prompt terlebih dahulu.', 'error');
+            return;
+        }
+
+        // Simulasi loading
+        this.showResult('🔄 Sedang memproses... (Simulasi AI bekerja)', 'loading');
+
+        // Simulasi delay AI processing
+        setTimeout(() => {
+            const result = this.mockAIGeneration(prompt, style);
+            this.showResult(result.content, 'success', result.type);
+            this.addToHistory(prompt, result);
+        }, 2000);
+    }
+
+    mockAIGeneration(prompt, style) {
+        const tools = ['image', 'video', 'audio', 'text'];
+        const detectedTool = tools.find(tool => prompt.toLowerCase().includes(tool)) || 'text';
+        
+        const mockData = {
+            'image': {
+                type: 'image',
+                content: `
+                    <div class="mock-result">
+                        <h4>🎨 Hasil Gambar AI (Style: ${style})</h4>
+                        <div class="mock-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 200px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
+                            Gambar AI Hasil: "${prompt.substring(0, 50)}..."
+                        </div>
+                        <p style="margin-top: 15px; color: #cbd5e1;">
+                            <strong>Prompt:</strong> ${prompt}<br>
+                            <strong>Style:</strong> ${style}<br>
+                            <strong>Resolusi:</strong> 1024x1024<br>
+                            <strong>Waktu:</strong> 2.3 detik (simulasi)
+                        </p>
+                        <button class="btn-use" style="margin-top: 15px;">💾 Download PNG</button>
+                    </div>
+                `
+            },
+            'video': {
+                type: 'video',
+                content: `
+                    <div class="mock-result">
+                        <h4>🎬 Hasil Video AI</h4>
+                        <div class="mock-video" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); height: 200px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
+                            Video Pendek (5 detik) - AI Generated
+                        </div>
+                        <p style="margin-top: 15px; color: #cbd5e1;">
+                            <strong>Status:</strong> Render selesai<br>
+                            <strong>Durasi:</strong> 5 detik<br>
+                            <strong>Format:</strong> MP4 H.264
+                        </p>
+                        <button class="btn-use" style="margin-top: 15px; background: #f5576c;">▶️ Putar Video</button>
+                    </div>
+                `
+            },
+            'audio': {
+                type: 'audio',
+                content: `
+                    <div class="mock-result">
+                        <h4>🔊 Hasil Suara AI</h4>
+                        <div class="mock-audio" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 10px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="font-size: 2rem;">🎤</div>
+                                <div>
+                                    <p style="color: white; margin: 0;">Suara: ${style === 'realistic' ? 'Pria Dewasa' : 'Wanita Muda'}</p>
+                                    <p style="color: #cbd5e1; margin: 5px 0 0 0;">${prompt.substring(0, 70)}...</p>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; background: rgba(255,255,255,0.2); height: 4px; border-radius: 2px;">
+                                <div style="width: 70%; background: white; height: 100%; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                        <button class="btn-use" style="margin-top: 15px; background: #4facfe;">⬇️ Download MP3</button>
+                    </div>
+                `
+            },
+            'text': {
+                type: 'text',
+                content: `
+                    <div class="mock-result">
+                        <h4>📝 Hasil Teks AI</h4>
+                        <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; border-left: 4px solid #10b981;">
+                            <p style="color: #e2e8f0; line-height: 1.6;">
+                                ${this.generateMockText(prompt)}<br><br>
+                                <em>--- Teks dilanjutkan sesuai dengan prompt Anda ---</em>
+                            </p>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button class="btn-use" style="flex: 1;">📋 Salin Teks</button>
+                            <button class="btn-use" style="flex: 1; background: #6b7280;">🔄 Generate Lagi</button>
+                        </div>
+                    </div>
+                `
+            }
+        };
+
+        return mockData[detectedTool] || mockData.text;
+    }
+
+    generateMockText(prompt) {
+        const paragraphs = [
+            `Berdasarkan prompt "${prompt.substring(0, 30)}...", AI menghasilkan konten kreatif yang sesuai dengan permintaan.`,
+            `Dalam simulasi ini, model bahasa besar menganalisis konteks dan menghasilkan teks yang koheren.`,
+            `Untuk implementasi nyata, diperlukan integrasi dengan API AI seperti OpenAI GPT atau model serupa.`,
+            `Versi gratis ini hanya demonstrasi frontend tanpa backend sebenarnya.`
+        ];
+        return paragraphs.join(' ');
+    }
+
+    showResult(content, type, resultType = 'text') {
+        const resultDiv = document.getElementById('result');
+        
+        if (type === 'loading') {
+            resultDiv.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner" style="width: 50px; height: 50px; border: 5px solid rgba(59, 130, 246, 0.3); border-top: 5px solid #3B82F6; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite;"></div>
+                    <p style="color: #93c5fd;">${content}</p>
+                </div>
+                <style>
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            `;
+        } else if (type === 'error') {
+            resultDiv.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; padding: 20px; border-radius: 10px; color: #fca5a5;">
+                    <h4 style="margin: 0 0 10px 0;">⚠️ ${content}</h4>
+                    <p>Coba masukkan prompt yang lebih deskriptif.</p>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = content;
+        }
+
+        // Scroll to result
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    addToHistory(prompt, result) {
+        const historyItem = {
+            id: Date.now(),
+            timestamp: new Date().toLocaleString('id-ID'),
+            prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+            type: result.type,
+            content: result.content.substring(0, 200) + '...'
+        };
+
+        this.history.unshift(historyItem);
+        if (this.history.length > 20) this.history = this.history.slice(0, 20);
+        
+        localStorage.setItem('aldiToolsHistory', JSON.stringify(this.history));
+        this.renderHistory();
+    }
+
+    renderHistory() {
+        const historyList = document.getElementById('history-list');
+        
+        if (this.history.length === 0) {
+            historyList.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
+                    <h3>Riwayat Kosong</h3>
+                    <p>Generate sesuatu untuk melihat riwayat di sini.</p>
+                </div>
+            `;
+            return;
+        }
+
+        historyList.innerHTML = this.history.map(item => `
+            <div class="history-item">
+                <h4>${item.type === 'image' ? '🖼️' : item.type === 'video' ? '🎬' : item.type === 'audio' ? '🔊' : '📝'} ${item.prompt}</h4>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin: 10px 0;">${item.timestamp}</p>
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; margin-top: 10px;">
+                    ${item.content}
+                </div>
+                <button onclick="aldiToolsClone.regenerate(${item.id})" style="margin-top: 10px; padding: 8px 15px; background: rgba(59, 130, 246, 0.2); border: 1px solid #3B82F6; color: #93c5fd; border-radius: 5px; cursor: pointer;">🔄 Ulangi</button>
+            </div>
+        `).join('');
+    }
+
+    regenerate(id) {
+        const item = this.history.find(h => h.id === id);
+        if (item) {
+            document.getElementById('prompt').value = item.prompt;
+            this.generateContent();
+        }
+    }
+
+    clearHistory() {
+        if (confirm('Hapus semua riwayat generasi?')) {
+            this.history = [];
+            localStorage.removeItem('aldiToolsHistory');
+            this.renderHistory();
+            this.showResult('✅ Riwayat telah dihapus.', 'success');
+        }
+    }
+
+    setupMockData() {
+        // Add sample history if empty
+        if (this.history.length === 0) {
+            const samples = [
+                {
+                    id: 1,
+                    timestamp: new Date(Date.now() - 3600000).toLocaleString('id-ID'),
+                    prompt: 'Gambar kucing sedang bermain di taman, style anime',
+                    type: 'image',
+                    content: 'Hasil gambar anime kucing dengan taman warna-warni...'
+                },
+                {
+                    id: 2,
+                    timestamp: new Date(Date.now() - 7200000).toLocaleString('id-ID'),
+                    prompt: 'Tulis puisi tentang teknologi dan manusia',
+                    type: 'text',
+                    content: 'Dalam dunia bit dan byte, manusia mencari arti...'
+                }
+            ];
+            this.history.push(...samples);
+            this.renderHistory();
+        }
+    }
 }
 
-from google import genai
-from google.genai import types
+// Initialize
+const aldiToolsClone = new AldiToolsClone();
 
-client = genai.Client()
+// Make available globally
+window.aldiToolsClone = aldiToolsClone;
 
-response = client.models.generate_content(
-    model="gemini-3-pro-preview",
-    contents="How does AI work?",
-    config=types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_level="low")
-    ),
-)
-
-print(response.text)
-from google import genai
-from google.genai import types    
-
-client = genai.Client()
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents="A minimalist composition featuring a single, delicate red maple leaf positioned in the bottom-right of the frame. The background is a vast, empty off-white canvas, creating significant negative space for text. Soft, diffused lighting from the top left. Square image.",
-)
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif part.inline_data is not None:
-        image = part.as_image()
-        image.save("minimalist_design.png")
-from google import genai
-from google.genai import types
-
-client = genai.Client()
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents="A high-resolution, studio-lit product photograph of a minimalist ceramic coffee mug in matte black, presented on a polished concrete surface. The lighting is a three-point softbox setup designed to create soft, diffused highlights and eliminate harsh shadows. The camera angle is a slightly elevated 45-degree shot to showcase its clean lines. Ultra-realistic, with sharp focus on the steam rising from the coffee. Square image.",
-)
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif part.inline_data is not None:
-        image = part.as_image()
-        image.save("product_mockup.png")
-from google import genai
-from google.genai import types
-
-client = genai.Client()
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents="A kawaii-style sticker of a happy red panda wearing a tiny bamboo hat. It's munching on a green bamboo leaf. The design features bold, clean outlines, simple cel-shading, and a vibrant color palette. The background must be white.",
-)
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif part.inline_data is not None:
-        image = part.as_image()
-        image.save("red_panda_sticker.png")
-from google import genai
-from google.genai import types    
-
-client = genai.Client()
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents="A photorealistic close-up portrait of an elderly Japanese ceramicist with deep, sun-etched wrinkles and a warm, knowing smile. He is carefully inspecting a freshly glazed tea bowl. The setting is his rustic, sun-drenched workshop with pottery wheels and shelves of clay pots in the background. The scene is illuminated by soft, golden hour light streaming through a window, highlighting the fine texture of the clay and the fabric of his apron. Captured with an 85mm portrait lens, resulting in a soft, blurred background (bokeh). The overall mood is serene and masterful.",
-)
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif part.inline_data is not None:
-        image = part.as_image()
-        image.save("photorealistic_example.png")
-for part in response.parts:
-    if part.thought:
-        if part.text:
-            print(part.text)
-        elif image:= part.as_image():
-            image.show()
-from google import genai
-from google.genai import types
-
-client = genai.Client()
-response = client.models.generate_content(
-    model='models/gemini-2.5-flash',
-    contents=types.Content(
-        parts=[
-            types.Part(
-                file_data=types.FileData(file_uri='https://www.youtube.com/watch?v=9hE5-98ZeCg')
-            ),
-            types.Part(text='Please summarize the video in 3 sentences.')
-        ]
-    )
-)
-print(response.text)
-from google import genai
-
-client = genai.Client()
-
-myfile = client.files.upload(file="path/to/sample.mp4")
-
-response = client.models.generate_content(
-    model="gemini-2.5-flash", contents=[myfile, "Summarize this video. Then create a quiz with an answer key based on the information in this video."]
-)
-
-print(response.text)
-message = "Update this infographic to be in Spanish. Do not change any other elements of the image."
-aspect_ratio = "16:9" # "1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"
-resolution = "2K" # "1K", "2K", "4K"
-
-response = chat.send_message(message,
-    config=types.GenerateContentConfig(
-        image_config=types.ImageConfig(
-            aspect_ratio=aspect_ratio,
-            image_size=resolution
-        ),
-    ))
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif image:= part.as_image():
-        image.save("photosynthesis_spanish.png")
-async function sendPrompt() {
-  const prompt = document.getElementById("prompt").value;
-  const resultBox = document.getElementById("result");
-
-  if (!prompt) {
-    resultBox.textContent = "Ketik perintah dulu dong!";
-    return;
-  }
-
-  resultBox.textContent = "Emergent AI lagi mikir...";
-
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyD_HZMpEVY9BIw6K_JwWnALyRjcsTkC8oQ",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      }
-    );
-
-    const data = await response.json();
-    
-    if (data.candidates && data.candidates[0].content) {
-      resultBox.textContent = data.candidates[0].content.parts[0].text;
-    } else {
-      resultBox.textContent = "Error: " + JSON.stringify(data);
+// Additional UI effects
+document.addEventListener('DOMContentLoaded', () => {
+    // Typewriter effect for subtitle
+    const subtitle = document.querySelector('.subtitle');
+    if (subtitle) {
+        const text = subtitle.textContent;
+        subtitle.textContent = '';
+        let i = 0;
+        const typeWriter = () => {
+            if (i < text.length) {
+                subtitle.textContent += text.charAt(i);
+                i++;
+                setTimeout(typeWriter, 30);
+            }
+        };
+        setTimeout(typeWriter, 1000);
     }
-  } catch (error) {
-    resultBox.textContent = "Koneksi bermasalah!";
-  }
-}
-async function sendPrompt() {
-  const prompt = document.getElementById("prompt").value;
-  const resultBox = document.getElementById("result");
 
-  resultBox.textContent = "Generating...";
+    // Auto-save prompt
+    const promptTextarea = document.getElementById('prompt');
+    if (promptTextarea) {
+        promptTextarea.addEventListener('input', () => {
+            localStorage.setItem('aldiToolsLastPrompt', promptTextarea.value);
+        });
 
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=API_KEY_KAMU",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+        // Load saved prompt
+        const savedPrompt = localStorage.getItem('aldiToolsLastPrompt');
+        if (savedPrompt) {
+            promptTextarea.value = savedPrompt;
+        }
     }
-  );
-
-  const data = await response.json();
-  resultBox.textContent =
-    data.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal generate";
-}
+});
