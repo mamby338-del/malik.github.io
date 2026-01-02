@@ -1,0 +1,279 @@
+// BACKEND SERVER - Untuk proxy API calls dan hide API keys
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+require('dotenv').config();
+
+const app = express();
+const PORT = 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Load environment variables (API Keys)
+const API_KEYS = {
+    STABILITY_AI: process.env.STABILITY_AI_KEY,
+    OPENAI: process.env.OPENAI_API_KEY,
+    ELEVENLABS: process.env.ELEVENLABS_API_KEY,
+    GOOGLE: process.env.GOOGLE_API_KEY,
+    ANTHROPIC: process.env.ANTHROPIC_API_KEY
+};
+
+// Rate limiting store
+const requestCounts = new Map();
+
+// Rate limiting middleware
+const rateLimit = (req, res, next) => {
+    const ip = req.ip;
+    const now = Date.now();
+    const windowMs = 60 * 1000; // 1 minute
+    const maxRequests = 30; // 30 requests per minute
+    
+    if (!requestCounts.has(ip)) {
+        requestCounts.set(ip, []);
+    }
+    
+    const requests = requestCounts.get(ip);
+    const validRequests = requests.filter(time => now - time < windowMs);
+    
+    if (validRequests.length >= maxRequests) {
+        return res.status(429).json({ error: 'Too many requests' });
+    }
+    
+    validRequests.push(now);
+    requestCounts.set(ip, validRequests);
+    next();
+};
+
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Proxy untuk Stability AI (Image Generation)
+app.post('/api/generate/image', rateLimit, async (req, res) => {
+    try {
+        const { prompt, style, width = 512, height = 512 } = req.body;
+        
+        const response = await axios.post(
+            'https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image',
+            {
+                text_prompts: [{ text: prompt, weight: 1 }],
+                cfg_scale: 7,
+                height,
+                width,
+                steps: 30,
+                samples: 1,
+                style_preset: style || 'digital-art'
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${API_KEYS.STABILITY_AI}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            }
+        );
+        
+        // Base64 image
+        const image = response.data.artifacts[0].base64;
+        res.json({ 
+            success: true, 
+            image: `data:image/png;base64,${image}`,
+            prompt,
+            model: 'stable-diffusion-v1-6'
+        });
+        
+    } catch (error) {
+        console.error('Stability AI Error:', error.response?.data || error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: error.response?.data?.message || 'Image generation failed',
+            fallback: true
+        });
+    }
+});
+
+// Proxy untuk OpenAI GPT (Text Generation)
+app.post('/api/generate/text', rateLimit, async (req, res) => {
+    try {
+        const { prompt, model = 'gpt-3.5-turbo', max_tokens = 1000 } = req.body;
+        
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens,
+                temperature: 0.7
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${API_KEYS.OPENAI}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        res.json({
+            success: true,
+            text: response.data.choices[0].message.content,
+            usage: response.data.usage,
+            model
+        });
+        
+    } catch (error) {
+        console.error('OpenAI Error:', error.response?.data || error.message);
+        
+        // Fallback ke Gemini jika OpenAI gagal
+        if (API_KEYS.GOOGLE) {
+            try {
+                const geminiResponse = await axios.post(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEYS.GOOGLE}`,
+                    {
+                        contents: [{ parts: [{ text: prompt }] }]
+                    }
+                );
+                
+                return res.json({
+                    success: true,
+                    text: geminiResponse.data.candidates[0].content.parts[0].text,
+                    model: 'gemini-pro',
+                    fallback: true
+                });
+            } catch (geminiError) {
+                // Continue to generic error
+            }
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            error: 'Text generation failed',
+            fallback: true
+        });
+    }
+});
+
+// Proxy untuk ElevenLabs (Text-to-Speech)
+app.post('/api/generate/audio', rateLimit, async (req, res) => {
+    try {
+        const { text, voice_id = '21m00Tcm4TlvDq8ikWAM' } = req.body;
+        
+        const response = await axios.post(
+            `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
+            {
+                text,
+                model_id: 'eleven_monolingual_v1',
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.5
+                }
+            },
+            {
+                headers: {
+                    'xi-api-key': API_KEYS.ELEVENLABS,
+                    'Content-Type': 'application/json',
+                    'Accept': 'audio/mpeg'
+                },
+                responseType: 'arraybuffer'
+            }
+        );
+        
+        // Convert audio buffer to base64
+        const audioBase64 = Buffer.from(response.data).toString('base64');
+        
+        res.json({
+            success: true,
+            audio: `data:audio/mpeg;base64,${audioBase64}`,
+            voice: voice_id,
+            text_length: text.length
+        });
+        
+    } catch (error) {
+        console.error('ElevenLabs Error:', error.response?.status);
+        
+        // Fallback ke Google TTS
+        if (API_KEYS.GOOGLE) {
+            try {
+                const googleResponse = await axios.post(
+                    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${API_KEYS.GOOGLE}`,
+                    {
+                        input: { text },
+                        voice: { languageCode: 'id-ID', ssmlGender: 'NEUTRAL' },
+                        audioConfig: { audioEncoding: 'MP3' }
+                    }
+                );
+                
+                return res.json({
+                    success: true,
+                    audio: `data:audio/mp3;base64,${googleResponse.data.audioContent}`,
+                    voice: 'google-tts',
+                    fallback: true
+                });
+            } catch (googleError) {
+                // Continue to generic error
+            }
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            error: 'Audio generation failed' 
+        });
+    }
+});
+
+// Batch processing endpoint
+app.post('/api/generate/batch', async (req, res) => {
+    const { operations } = req.body;
+    const results = [];
+    
+    for (const op of operations) {
+        try {
+            let result;
+            
+            switch (op.type) {
+                case 'image':
+                    result = await axios.post('http://localhost:3000/api/generate/image', op.data);
+                    break;
+                case 'text':
+                    result = await axios.post('http://localhost:3000/api/generate/text', op.data);
+                    break;
+                case 'audio':
+                    result = await axios.post('http://localhost:3000/api/generate/audio', op.data);
+                    break;
+            }
+            
+            results.push({ type: op.type, success: true, data: result.data });
+        } catch (error) {
+            results.push({ type: op.type, success: false, error: error.message });
+        }
+    }
+    
+    res.json({ results });
+});
+
+// API Keys management (admin only)
+app.post('/api/keys/update', (req, res) => {
+    const { adminToken, keys } = req.body;
+    
+    // Simple admin check
+    if (adminToken !== process.env.ADMIN_TOKEN) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Update keys in environment
+    Object.assign(API_KEYS, keys);
+    res.json({ success: true, message: 'API keys updated' });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`✅ Backend server running on http://localhost:${PORT}`);
+    console.log(`📁 API Endpoints:`);
+    console.log(`   POST /api/generate/image`);
+    console.log(`   POST /api/generate/text`);
+    console.log(`   POST /api/generate/audio`);
+    console.log(`   POST /api/generate/batch`);
+    console.log(`   GET  /api/health`);
+});
